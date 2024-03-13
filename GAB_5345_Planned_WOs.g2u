@@ -1,0 +1,815 @@
+Program.Sub.ScreenSU.Start
+Gui.frmPlanned..Create
+Gui.frmPlanned..Size(17040,7860)
+Gui.frmPlanned..MinX(0)
+Gui.frmPlanned..MinY(0)
+Gui.frmPlanned..Position(0,0)
+Gui.frmPlanned..BackColor(-2147483633)
+Gui.frmPlanned..MousePointer(0)
+Gui.frmPlanned..Caption("Planned Orders")
+Gui.frmPlanned..Event(UnLoad,frmPlanned_UnLoad)
+Gui.frmPlanned.GsGCPlanned.Create(GsGridControl)
+Gui.frmPlanned.GsGCPlanned.Size(16860,7155)
+Gui.frmPlanned.GsGCPlanned.Position(15,15)
+Gui.frmPlanned.GsGCPlanned.Anchor(15)
+Gui.frmPlanned.GsGCPlanned.Event(RowCellClick,GsGCPlanned_RowCellClick)
+Gui.frmPlanned.cmdSave.Create(Button)
+Gui.frmPlanned.cmdSave.Size(855,375)
+Gui.frmPlanned.cmdSave.Position(16020,7200)
+Gui.frmPlanned.cmdSave.Anchor(10)
+Gui.frmPlanned.cmdSave.Caption("Save")
+Gui.frmPlanned.cmdSave.Event(Click,cmdSave_Click)
+Gui.frmPlanned.lblStatus.Create(Label,"Loading....",False,990,255,0,60,7305,True,0,"Arial",8,-2147483633,0)
+Gui.frmPlanned.lblStatus.FontStyle(True,False,False,False,False)
+Gui.frmPlanned.lblStatus.Anchor(6)
+Gui.frmPlanned.pgbStatus.Create(ProgressBar)
+Gui.frmPlanned.pgbStatus.Visible(False)
+Gui.frmPlanned.pgbStatus.Size(3240,255)
+Gui.frmPlanned.pgbStatus.Position(1080,7245)
+Gui.frmPlanned.pgbStatus.Anchor(6)
+Gui.frmPlanned.cmdErrors.Create(Button)
+Gui.frmPlanned.cmdErrors.Size(1125,375)
+Gui.frmPlanned.cmdErrors.Position(14865,7200)
+Gui.frmPlanned.cmdErrors.Caption("View Errors")
+Gui.frmPlanned.cmdErrors.Event(Click,cmdErrors_Click)
+Gui.frmPlanned.cmdErrors.Anchor(10)
+Gui.frmPlanned.cmdClearPlanned.Create(Button)
+Gui.frmPlanned.cmdClearPlanned.Size(1800,375)
+Gui.frmPlanned.cmdClearPlanned.Position(13020,7200)
+Gui.frmPlanned.cmdClearPlanned.Caption("Clear Planned Orders")
+Gui.frmPlanned.cmdClearPlanned.Event(Click,cmdClearPlanned_Click)
+Gui.frmPlanned.cmdClearPlanned.Anchor(10)
+Gui.frmErrors..Create
+Gui.frmErrors..Caption("Scheduling Errors")
+Gui.frmErrors..Size(7095,5115)
+Gui.frmErrors..MinX(0)
+Gui.frmErrors..MinY(0)
+Gui.frmErrors..Position(0,0)
+Gui.frmErrors..BackColor(-2147483633)
+Gui.frmErrors..MousePointer(0)
+Gui.frmErrors..Event(UnLoad,frmErrors_UnLoad)
+Gui.frmErrors.cmdClear.Create(Button)
+Gui.frmErrors.cmdClear.Size(1125,375)
+Gui.frmErrors.cmdClear.Position(5820,4410)
+Gui.frmErrors.cmdClear.Anchor(10)
+Gui.frmErrors.cmdClear.Caption("Clear Errors")
+Gui.frmErrors.cmdClear.Event(Click,cmdClear_Click)
+Gui.frmErrors.GsGCFiles.Create(GsGridControl)
+Gui.frmErrors.GsGCFiles.Size(6915,4380)
+Gui.frmErrors.GsGCFiles.Position(30,0)
+Gui.frmErrors.GsGCFiles.Anchor(15)
+Gui.frmErrors.GsGCFiles.Event(RowCellClick,GsGCFiles_RowCellClick)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+	V.Global.sGsGCIcon.Declare
+	Program.External.Include.Library("410000.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sIcon.Declare
+	
+	'Set Program Icon
+	F.Intrinsic.String.Build("{0}\gss2.ico",V.Caller.ArtDir,V.Local.sIcon)
+	
+	'Set Icon
+	Gui.frmPlanned..Icon(V.Local.sIcon)
+	Gui.frmErrors..Icon(V.Local.sIcon)
+	
+	'Set Logo in GsGridControl Group Header
+	F.Intrinsic.String.Build("{0}\GAB_GSS_Logo_Green_Dash.png",V.Caller.ArtDir,V.Global.sGsGCIcon)
+
+	F.ODBC.Connection!con.OpenCompanyConnection(300)
+	
+	Gui.frmPlanned..Show
+	
+	F.Intrinsic.Control.CallSub(SetContextMenus)
+	F.Intrinsic.Control.CallSub(LoadOrders)
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.frmPlanned_UnLoad.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	F.ODBC.Connection!con.Close
+	F.Intrinsic.Control.End
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.frmPlanned_UnLoad.End
+
+Program.Sub.SetContextMenus.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	Gui.frmPlanned..ContextMenuCreate("CTXPLAN")
+	Gui.frmPlanned.GsGCPlanned.ContextMenuAttach("CTXPLAN")
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","Refresh",0,"Refresh")
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","Export",0,"Export")
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","Exp",3)
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","SchedulePlan",0,"Schedule Planned WOs")
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","Exp",3)
+	Gui.frmPlanned..ContextMenuAddItem("CTXPLAN","ScheduleProd",0,"Schedule Production WO")
+	Gui.frmPlanned..ContextMenuSetItemEventHandler("CTXPLAN","Refresh","MenuClick")
+	Gui.frmPlanned..ContextMenuSetItemEventHandler("CTXPLAN","Export","MenuClick")
+	Gui.frmPlanned..ContextMenuSetItemEventHandler("CTXPLAN","SchedulePlan","MenuClick")
+	Gui.frmPlanned..ContextMenuSetItemEventHandler("CTXPLAN","ScheduleProd","MenuClick")
+	
+	Gui.frmErrors..ContextMenuCreate("CTXERR")
+	Gui.frmErrors.GsGCFiles.ContextMenuAttach("CTXERR")
+	Gui.frmErrors..ContextMenuAddItem("CTXERR","SELALL",0,"Select All")
+	Gui.frmErrors..ContextMenuAddItem("CTXERR","DESELALL",0,"Deselect All")
+	Gui.frmErrors..ContextMenuSetItemEventHandler("CTXERR","SELALL","MenuClick")
+	Gui.frmErrors..ContextMenuSetItemEventHandler("CTXERR","DESELALL","MenuClick")
+	
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.SetContextMenus.End
+
+Program.Sub.MenuClick.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sFileExport.Declare
+	V.Local.bExcel.Declare
+	V.Local.bFileLocked.Declare
+	V.Local.sMsg.Declare
+	V.Local.sExt.Declare
+	V.Local.sGAB.Declare
+	V.Local.iRet.Declare
+	V.Local.iRow.Declare
+	V.Local.sOrderNo.Declare
+	V.Local.sOrderLine.Declare
+	V.Local.sPartRev.Declare
+	V.Local.sPart.Declare
+	V.Local.sRev.Declare
+	V.Local.sLoc.Declare
+
+	F.Intrinsic.Control.SelectCase(V.Args.ItemName)
+		F.Intrinsic.Control.Case("REFRESH")
+			F.Intrinsic.Control.CallSub(LoadOrders)
+			
+		F.Intrinsic.Control.Case("EXPORT")
+			F.Automation.MSExcel.CheckPresence(V.Local.bExcel)
+			F.Intrinsic.Control.If(V.Local.bExcel)
+				V.Local.sExt.Set("xlsx")
+			F.Intrinsic.Control.Else
+				V.Local.sExt.Set("csv")
+			F.Intrinsic.Control.EndIf
+			
+			F.Intrinsic.String.Build("{0}\GAB_5345_Planned_Export.{1}",V.Caller.LocalGssTempDir,V.Local.sExt,V.Local.sFileExport)
+			F.Intrinsic.File.IsFileLocked(V.Local.sFileExport,V.Local.bFileLocked)
+			F.Intrinsic.Control.If(V.Local.bFileLocked)
+				F.Intrinsic.String.Build("File is already open. Please close and export again.{0}File: {1}",V.Ambient.NewLine,V.Local.sFileExport,V.Local.sMsg)
+				F.Intrinsic.UI.Msgbox(V.Local.sMsg,"File In Use")
+			F.Intrinsic.Control.Else
+				Gui.frmPlanned.GsGCPlanned.Export(V.Local.sFileExport,V.Local.sExt)
+				F.Intrinsic.Task.ShellExec(0,"",V.Local.sFileExport,"","",1)
+			F.Intrinsic.Control.EndIf
+			
+		F.Intrinsic.Control.Case("SCHEDULEPLAN")
+			Gui.frmPlanned.lblStatus.Caption("Scheduling Planned WOs....")
+			Gui.frmPlanned.lblStatus.Visible(True)
+			Gui.frmPlanned.GsGCPlanned.Enabled(False)
+			F.Intrinsic.String.Build("{0}\GAB_5345_Sched_Planned_WOs.g2u",V.Caller.GASDir,V.Local.sGAB)
+			F.Global.General.CallSyncGAS(V.Local.sGAB)
+			F.Intrinsic.Control.CallSub(LoadOrders)
+			Gui.frmPlanned.GsGCPlanned.Enabled(True)
+			
+		F.Intrinsic.Control.Case("SCHEDULEPROD")
+			Gui.frmPlanned.GsGCPlanned.GetSelectedRows("gvOrders",V.Local.iRow)
+			V.Local.sOrderNo.Set(V.DataTable.dtOrders(V.Local.iRow).ORDER_NO!FieldVal)
+			V.Local.sOrderLine.Set(V.DataTable.dtOrders(V.Local.iRow).ORDER_LINE!FieldVal)
+			V.Local.sPartRev.Set(V.DataTable.dtOrders(V.Local.iRow).PART!FieldVal)
+			V.Local.sPart.Set(V.Local.sPartRev.Left17)
+			V.Local.sRev.Set(V.Local.sPartRev.Right3)
+			V.Local.sLoc.Set(V.DataTable.dtOrders(V.Local.iRow).LOCATION!FieldVal)
+			F.Intrinsic.String.Build("Schedule Production WO for Sales Order {0}?",V.Local.sOrderNo,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Schedule Production WO",4,V.Local.iRet)
+			F.Intrinsic.Control.If(V.Local.iRet,=,6)
+				Gui.frmPlanned.lblStatus.Caption("Scheduling Planned WOs....")
+				Gui.frmPlanned.lblStatus.Visible(True)
+				Gui.frmPlanned.GsGCPlanned.Enabled(False)
+				F.Global.General.SetPassedDataElement("SCHEDULEWOS","SCHEDULEWOS")
+				F.Global.General.SetPassedDataElement("OrderNo",V.Local.sOrderNo)
+				F.Global.General.SetPassedDataElement("OrderLine",V.Local.sOrderLine.Left3)
+				F.Global.General.SetPassedDataElement("Part",V.Local.sPart.Trim)
+				F.Global.General.SetPassedDataElement("Rev",V.Local.sRev.Trim)
+				F.Global.General.SetPassedDataElement("Loc",V.Local.sLoc.Trim)
+				F.Intrinsic.String.Build("{0}\GAB_5345_Schedule_WO.g2u",V.Caller.GASDir,V.Local.sGAB)
+				F.Global.General.CallSyncGAS(V.Local.sGAB)
+				F.Global.General.ResetPassedDataElements
+				F.Intrinsic.Control.CallSub(LoadOrders)
+				Gui.frmPlanned.GsGCPlanned.Enabled(True)
+			F.Intrinsic.Control.EndIf
+			
+		F.Intrinsic.Control.Case("SELALL")
+			F.Data.DataTable.SetValue("dtErrors",-1,"SELECT",True)
+			
+		F.Intrinsic.Control.Case("DESELALL")
+			F.Data.DataTable.SetValue("dtErrors",-1,"SELECT",False)
+			
+	F.Intrinsic.Control.EndSelect
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.MenuClick.End
+
+Program.Sub.LoadOrders.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.iCnt.Declare
+	V.Local.iCnt2.Declare
+	V.Local.sExp.Declare
+	V.Local.sSelect.Declare
+	V.Local.sFileName.Declare
+	V.Local.sOrderNo.Declare
+	V.Local.sOrderLine.Declare
+	V.Local.sParent.Declare
+	V.Local.dShipDate.Declare
+	V.Local.sData.Declare
+	V.Local.sRows.Declare
+	V.Local.sCols.Declare
+	V.Local.iSeq.Declare
+	
+	F.Intrinsic.Control.If(V.DataTable.dtOrders.Exists)
+		F.Data.DataTable.Close("dtOrders")
+	F.Intrinsic.Control.EndIf
+	
+	Gui.frmPlanned.lblStatus.Caption("Loading....")
+	Gui.frmPlanned.lblStatus.Visible(True)
+	Gui.frmPlanned.pgbStatus.Visible(True)
+	Gui.frmPlanned.pgbStatus.Min(0)
+	Gui.frmPlanned.pgbStatus.Max(100)
+	Gui.frmPlanned.pgbStatus.Value(0)
+	
+	'Remove Planned WOs if Source Code is Purchase
+	F.ODBC.Connection!con.Execute("DELETE FROM GAB_5345_PLANNED WHERE PART+LOCATION IN (SELECT PART+LOCATION FROM V_INVENTORY_MST2 WHERE GAB_5345_PLANNED.PART = V_INVENTORY_MST2.PART AND GAB_5345_PLANNED.LOCATION = V_INVENTORY_MST2.LOCATION AND CODE_SOURCE NOT IN ('M','F'));")
+
+	'Pull all orders that do not have a work order generated for them
+	'F.Data.DataTable.CreateFromSQL("dtOrders","con","SELECT A.ORDER_NO,A.RECORD_NO AS ORDER_LINE,A.CUSTOMER,B.NAME_CUSTOMER,CASE WHEN D.SEQ IS NULL THEN 0 ELSE D.SEQ END AS SEQ,D.PARENT,CASE WHEN D.PART IS NULL THEN A.PART ELSE D.PART END AS PART,A.LOCATION,CASE WHEN D.DESCRIPTION IS NULL THEN A.DESCRIPTION ELSE D.DESCRIPTION END AS DESCRIPTION,CASE WHEN D.QTY IS NULL THEN A.QTY_BO ELSE D.QTY END AS QTY,A.DATE_ITEM_PROM AS SHIP_DATE,CASE WHEN D.SCHED_QTY IS NULL THEN CASE WHEN D.QTY IS NULL THEN A.QTY_BO ELSE D.QTY END ELSE D.SCHED_QTY END AS SCHED_QTY,D.SCHED_DUE_DATE,D.P_JOB,D.P_SFX,CAST(CASE WHEN D.PART IS NULL THEN 0 ELSE 1 END AS BIT) AS SKIP FROM V_ORDER_LINES A LEFT JOIN V_CUSTOMER_MASTER B ON A.CUSTOMER = B.CUSTOMER LEFT JOIN V_ORDER_TO_WO C ON A.ORDER_NO = C.ORDER_NO AND A.RECORD_NO = C.ORDER_LINE LEFT JOIN GAB_5345_PLANNED D ON A.ORDER_NO = D.ORDER_NO AND A.RECORD_NO = D.ORDER_LINE AND A.PART = D.PART AND A.LOCATION = D.LOCATION OR A.ORDER_NO = D.ORDER_NO AND A.RECORD_NO = D.ORDER_LINE AND A.PART = D.PARENT WHERE C.ORDER_NO IS NULL ORDER BY DATE_ITEM_PROM,A.ORDER_NO,ORDER_LINE,SEQ;",True)
+	'F.Data.DataTable.CreateFromSQL("dtOrders","con","SELECT A.ORDER_NO, A.RECORD_NO AS ORDER_LINE, A.CUSTOMER, B.NAME_CUSTOMER, 0 AS SEQ, '' AS PARENT, RTRIM(A.PART) AS PART, RTRIM(A.LOCATION) AS LOCATION, A.DESCRIPTION, A.QTY_BO AS QTY, A.DATE_ITEM_PROM AS SHIP_DATE, A.QTY_BO AS SCHED_QTY, CAST(NULL AS DATE) AS SCHED_DUE_DATE, '' AS P_JOB, '' AS P_SFX FROM V_ORDER_LINES A LEFT JOIN V_CUSTOMER_MASTER B ON A.CUSTOMER = B.CUSTOMER LEFT JOIN V_ORDER_TO_WO C ON A.ORDER_NO = C.ORDER_NO AND A.RECORD_NO = C.ORDER_LINE WHERE C.ORDER_NO IS NULL ORDER BY A.DATE_ITEM_PROM, A.ORDER_NO, ORDER_LINE, SEQ;",True)
+	F.Data.DataTable.CreateFromSQL("dtOrders","con","SELECT D.CODE_SOURCE, A.ORDER_NO, A.RECORD_NO AS ORDER_LINE, A.CUSTOMER, B.NAME_CUSTOMER, 0 AS SEQ, '' AS PARENT, RTRIM(A.PART) AS PART, RTRIM(A.LOCATION) AS LOCATION, A.DESCRIPTION, A.QTY_BO AS QTY, A.DATE_ITEM_PROM AS SHIP_DATE, A.QTY_BO AS SCHED_QTY, CAST(NULL AS DATE) AS SCHED_DUE_DATE, '' AS P_JOB, '' AS P_SFX FROM V_ORDER_LINES A LEFT JOIN V_CUSTOMER_MASTER B ON A.CUSTOMER = B.CUSTOMER LEFT JOIN V_ORDER_TO_WO C ON A.ORDER_NO = C.ORDER_NO AND A.RECORD_NO = C.ORDER_LINE LEFT JOIN V_INVENTORY_MST2 D ON A.PART = D.PART AND A.LOCATION = D.LOCATION WHERE C.ORDER_NO IS NULL AND D.CODE_SOURCE NOT IN ('P','S') OR C.ORDER_NO IS NULL AND D.CODE_SOURCE IS NULL ORDER BY A.DATE_ITEM_PROM, A.ORDER_NO, ORDER_LINE, SEQ;",True)
+	
+	'Add Columns
+	F.Data.DataTable.AddExpressionColumn("dtOrders","KEY",String,"ORDER_NO+ORDER_LINE")
+	
+	'Flag parts as BOMs
+	F.Data.DataTable.AddColumn("dtOrders","BOM",Boolean,False)
+	F.Data.Dictionary.CreateFromSQL("dBOM","con","SELECT RTRIM(PARENT) AS PARENT,CAST(1 AS BIT) FROM V_BOM_MSTR ORDER BY PARENT;")
+	F.Data.Dictionary.SetDefaultReturn("dBOM",False)
+	F.Data.DataTable.FillFromDictionary("dtOrders","dBOM","PART","BOM")
+	F.Data.Dictionary.Close("dBOM")
+	
+	'Check BOMs
+	'F.Data.DataTable.Select("dtOrders","BOM = True And SKIP = False",V.Local.sSelect)
+	F.Data.DataTable.Select("dtOrders","BOM = True",V.Local.sSelect)
+	F.Intrinsic.Control.If(V.Local.sSelect.IsNotNoReturn)
+		F.Intrinsic.String.Split(V.Local.sSelect,"*!*",V.Local.sSelect)
+		F.Intrinsic.Control.If(V.Local.sSelect.UBound,=,0)
+			Gui.frmPlanned.pgbStatus.Max(1)
+		F.Intrinsic.Control.Else
+			Gui.frmPlanned.pgbStatus.Max(V.Local.sSelect.UBound)
+		F.Intrinsic.Control.EndIf
+		
+		F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sSelect.UBound,1)
+			Gui.frmPlanned.pgbStatus.Value(V.Local.iCnt)
+			V.Local.sOrderNo.Set(V.DataTable.dtOrders(V.Local.sSelect(V.Local.iCnt)).ORDER_NO!FieldVal)
+			V.Local.sOrderLine.Set(V.DataTable.dtOrders(V.Local.sSelect(V.Local.iCnt)).ORDER_LINE!FieldVal)
+			V.Local.sParent.Set(V.DataTable.dtOrders(V.Local.sSelect(V.Local.iCnt)).PART!FieldValTrim)
+			V.Local.dShipDate.Set(V.DataTable.dtOrders(V.Local.sSelect(V.Local.iCnt)).SHIP_DATE!FieldValTrim)
+			F.Intrinsic.String.Build("{0}.txt",V.Local.sParent,V.Local.sFileName)
+			F.Data.DataTable.AddRow("410000","FilePath",V.Caller.LocalGSSTempDir,"FileName",V.Local.sFileName,"BOMType",0,"Part",V.Local.sParent,"Quantity",V.DataTable.dtOrders(V.Local.sSelect(V.Local.iCnt)).QTY!FieldVal)
+			F.Intrinsic.Control.CallSub(410000Sync)
+			'Pull output file to get file path
+			F.Intrinsic.String.Build("{0}{1}",V.Caller.LocalGSSTempDir,V.Local.sFileName,V.Local.sFileName)
+			F.Intrinsic.File.File2String(V.Local.sFileName,V.Local.sData)
+			F.Intrinsic.String.Split(V.Local.sData,V.Ambient.Tab,V.Local.sData)
+			'Pull BOM Data using path from above
+			F.Intrinsic.File.File2String(V.Local.sData(3),V.Local.sData)
+			F.Intrinsic.String.Split(V.Local.sData,V.Ambient.NewLine,V.Local.sRows)
+			V.Local.iSeq.Set(0)
+			F.Intrinsic.Control.For(V.Local.iCnt2,8,V.Local.sRows.UBound,1)
+				F.Intrinsic.String.Split(V.Local.sRows(V.Local.iCnt2),"|~|",V.Local.sCols)
+				F.Intrinsic.Control.If(V.Local.sCols(5).Trim,=,"MS")
+					F.Data.DataTable.AddRow("dtOrders","ORDER_NO",V.Local.sOrderNo,"ORDER_LINE",V.Local.sOrderLine,"SEQ",V.Local.iSeq.++,"PARENT",V.Local.sParent,"PART",V.Local.sCols(2).Trim,"LOCATION","","DESCRIPTION",V.Local.sCols(3).Trim,"QTY",V.Local.sCols(6).Trim,"SCHED_QTY",V.Local.sCols(6).Trim,"SHIP_DATE",V.Local.dShipDate)
+				F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.Next(V.Local.iCnt2)
+		F.Intrinsic.Control.Next(V.Local.iCnt)
+	F.Intrinsic.Control.EndIf
+	
+	'Add Fill Key Column
+	F.Data.DataTable.AddExpressionColumn("dtOrders","FILLKEY",String,"ORDER_NO+ORDER_LINE+CONVERT(SEQ, System.String)+[PARENT]+PART+LOCATION")
+	
+	'Drop in saved data from GAB_5345_PLANNED
+	F.Data.DataTable.CreateFromSQL("dtFillData","con","SELECT ORDER_NO+ORDER_LINE+CAST(SEQ AS CHAR)+RTRIM(PARENT)+RTRIM(PART)+RTRIM(LOCATION) AS FILLKEY, SCHED_QTY, SCHED_DUE_DATE, P_JOB, P_SFX FROM GAB_5345_PLANNED ORDER BY ORDER_NO, ORDER_LINE, SEQ;")
+	'SCHED_QTY
+	F.Data.Dictionary.CreateFromDataTable("dFill","dtFillData","FILLKEY","SCHED_QTY")
+	F.Data.Dictionary.SetDefaultReturn("dFill",0)
+	F.Data.DataTable.FillFromDictionary("dtOrders","dFill","FILLKEY","SCHED_QTY")
+	F.Data.Dictionary.Close("dFill")
+	'SCHED_DUE_DATE
+	F.Data.Dictionary.CreateFromDataTable("dFill","dtFillData","FILLKEY","SCHED_DUE_DATE")
+	F.Data.Dictionary.SetDefaultReturn("dFill","01/01/1900")
+	F.Data.DataTable.FillFromDictionary("dtOrders","dFill","FILLKEY","SCHED_DUE_DATE")
+	F.Data.Dictionary.Close("dFill")
+	'P_JOB
+	F.Data.Dictionary.CreateFromDataTable("dFill","dtFillData","FILLKEY","P_JOB")
+	F.Data.Dictionary.SetDefaultReturn("dFill","")
+	F.Data.DataTable.FillFromDictionary("dtOrders","dFill","FILLKEY","P_JOB")
+	F.Data.Dictionary.Close("dFill")
+	'P_SFX
+	F.Data.Dictionary.CreateFromDataTable("dFill","dtFillData","FILLKEY","P_SFX")
+	F.Data.Dictionary.SetDefaultReturn("dFill","")
+	F.Data.DataTable.FillFromDictionary("dtOrders","dFill","FILLKEY","P_SFX")
+	F.Data.Dictionary.Close("dFill")
+	
+	'Remove Columns
+	F.Data.DataTable.RemoveColumn("dtOrders","BOM")
+	F.Data.DataTable.RemoveColumn("dtOrders","FILLKEY")
+	
+	'Order Data by Ship Date, Order Number, Order Line and Seq
+	F.Data.DataView.Create("dtOrders","dvOrders",22,"","SHIP_DATE,ORDER_NO,ORDER_LINE,SEQ")
+	
+	'Show Orders
+	F.Intrinsic.Control.CallSub(FormatOrders)
+	
+	Gui.frmPlanned.lblStatus.Visible(False)
+	Gui.frmPlanned.pgbStatus.Visible(False)
+	
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.LoadOrders.End
+
+Program.Sub.FormatOrders.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	V.Local.iCnt.Declare
+	V.Local.sColumns.Declare
+	V.Local.sColor.Declare
+	V.Local.sKey.Declare
+	
+	'Set and Format Grid
+	Gui.frmPlanned.GsGCPlanned.AddGridviewFromDataview("gvOrders","dtOrders","dvOrders")
+	Gui.frmPlanned.GsGCPlanned.Icon(V.Global.sGsGCIcon)
+	Gui.frmPlanned.GsGCPlanned.SuspendLayout()
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","MultiSelect",True)
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","AllowSort",False)
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","AllowFilter",True)
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","OptionsDetailShowDetailTabs",False)
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","OptionsViewShowGroupPanel",True)
+	Gui.frmPlanned.GsGCPlanned.SetGridViewProperty("gvOrders","EnableAppearanceOddRow",True)
+	
+	'Loop through columns names by using the V.DataTable.dtName.FieldNames
+	F.Intrinsic.String.Split(V.DataTable.dtOrders.FieldNames,"*!*",V.Local.sColumns)
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sColumns.UBound,1)
+		Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders",V.Local.sColumns(V.Local.iCnt),"HeaderFontBold",True)
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	
+	'ORDER_NO
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","Caption","Order No")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","CellHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_NO","CellForeColor","Blue")
+	
+	'ORDER_LINE
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","Caption","Order Line")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","ORDER_LINE","CellHAlignment","Center")
+	
+	'CUSTOMER
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","Visible",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","Caption","Customer")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","CUSTOMER","CellHAlignment","Center")
+	
+	'NAME_CUSTOMER
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","Caption","Customer Name")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","MinWidth","130")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","HeaderHAlignment","Left")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","NAME_CUSTOMER","CellHAlignment","Left")
+	
+	'SEQ
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","Visible",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","Caption","Seq")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SEQ","CellHAlignment","Center")
+	
+	'PARENT
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","Visible",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","Caption","Parent")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PARENT","CellHAlignment","Center")
+
+	'PART
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","Caption","Part")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","MinWidth","130")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","HeaderHAlignment","Left")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","CellHAlignment","Left")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","PART","CellForeColor","Blue")
+	
+	'LOCATION
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","Caption","Loc")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","MinWidth","45")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","LOCATION","CellHAlignment","Center")
+	
+	'DESCRIPTION
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","Caption","Description")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","MinWidth","130")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","HeaderHAlignment","Left")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","DESCRIPTION","CellHAlignment","Left")
+	
+	'QTY
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","Caption","Qty")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","HeaderHAlignment","Far")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","CellHAlignment","Far")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","QTY","DisplayCustomNumeric","n2")
+	
+	'SHIP_DATE
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","Caption","Ship Date")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","CellHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SHIP_DATE","DisplayCustomDateTime","d")
+	
+	'SCHED_QTY
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","Caption","Sched Qty")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","AllowEdit",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","ReadOnly",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","HeaderHAlignment","Far")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","CellHAlignment","Far")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_QTY","DisplayCustomNumeric","n2")
+	
+	'SCHED_DUE_DATE
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","Caption","Sched Due Date")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","MinWidth","105")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","AllowEdit",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","ReadOnly",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","CellHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SCHED_DUE_DATE","DisplayCustomDateTime","d")
+	
+	'P_JOB
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","Caption","P-WO")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","MinWidth","85")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","CellHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_JOB","CellForeColor","Blue")
+	
+	'P_SFX
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","Caption","P-Suffix")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","MinWidth","65")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","CellHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","P_SFX","CellForeColor","Blue")
+	
+'	'SKIP
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","Visible",False)
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","Caption","Key")
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","MinWidth","10")
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","AllowEdit",False)
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","ReadOnly",True)
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","HeaderHAlignment","Center")
+'	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","SKIP","CellHAlignment","Center")
+	
+	'KEY
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","Visible",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","Caption","Key")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","MinWidth","10")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","AllowEdit",False)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","ReadOnly",True)
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","HeaderHAlignment","Center")
+	Gui.frmPlanned.GsGCPlanned.SetColumnProperty("gvOrders","KEY","CellHAlignment","Center")
+
+	'Alternate Colors based on Order No and Order Line************************************************************************************
+	F.Data.DataView.ToDataTableDistinct("dtOrders","dvOrders","dtColor","ORDER_NO*!*ORDER_LINE",True)
+	F.Data.DataTable.AddExpressionColumn("dtColor","KEY",String,"ORDER_NO+ORDER_LINE")
+	V.Local.sColor.Set("None")
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.DataTable.dtColor.RowCount--,1)
+		F.Intrinsic.Control.If(V.Local.sColor,=,"None")
+			V.Local.sColor.Set("LightGray")
+		F.Intrinsic.Control.Else
+			V.Local.sColor.Set("None")
+		F.Intrinsic.Control.EndIf
+		V.Local.sKey.Set(V.DataTable.dtColor(V.Local.iCnt).KEY!FieldVal)
+		Gui.frmPlanned.GsGCPlanned.AddStyleFormatCondition("gvOrders","KEY",V.Local.sKey,"Equal",V.Local.sKey)
+		Gui.frmPlanned.GsGCPlanned.SetStyleFormatConditionProperty("gvOrders","KEY",V.Local.sKey,"BackColor",V.Local.sColor)
+		Gui.frmPlanned.GsGCPlanned.SetStyleFormatConditionProperty("gvOrders","KEY",V.Local.sKey,"ApplyToRow",True)
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	F.Data.DataTable.Close("dtColor")
+	
+	Gui.frmPlanned.GsGCPlanned.ResumeLayout()
+	Gui.frmPlanned.GsGCPlanned.MainView("gvOrders")
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.FormatOrders.End
+
+Program.Sub.cmdSave_Click.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	F.Data.DataView.Create("dtOrders","dvOrdersChanged",22,"SCHED_DUE_DATE <> #01/01/1900#","")
+	F.Data.DataView.ToDataTable("dtOrders","dvOrdersChanged","dtOrdersChanged",True)
+	F.Data.DataView.Close("dtOrders","dvOrdersChanged")
+	F.Data.DataTable.Clone("dtOrdersChanged","dtOrdersSave",True)
+	F.Data.DataTable.Merge("dtOrdersChanged","dtOrdersSave",True,3)
+	F.Data.DataTable.Close("dtOrdersChanged")
+	
+	'Remove columns not in table definition
+	F.Data.DataTable.RemoveColumn("dtOrdersSave","CUSTOMER")
+	F.Data.DataTable.RemoveColumn("dtOrdersSave","NAME_CUSTOMER")
+	F.Data.DataTable.RemoveColumn("dtOrdersSave","SHIP_DATE")
+	F.Data.DataTable.RemoveColumn("dtOrdersSave","KEY")
+	
+	'Save to Database
+	F.Data.DataTable.SaveToDB("dtOrdersSave","con","GAB_5345_PLANNED","ORDER_NO*!*ORDER_LINE*!*SEQ*!*PART*!*LOCATION",256)
+	F.Data.DataTable.Close("dtOrdersSave")
+	
+	'Refresh main DataTable
+	F.Data.DataTable.AcceptChanges("dtOrders")
+	
+	'Date Saved
+	F.Intrinsic.UI.Msgbox("Data Saved!","Save")
+	
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.cmdSave_Click.End
+
+Program.Sub.cmdClearPlanned_Click.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.iRet.Declare
+	
+	F.Intrinsic.UI.Msgbox("This is going to delete all Planned Work Order data. Continue?","Clear Planned Orders",4,V.Local.iRet)
+	F.Intrinsic.Control.If(V.Local.iRet,=,6)
+		F.ODBC.Connection!con.Execute("DELETE FROM GAB_5345_PLANNED;")
+		F.Intrinsic.Control.CallSub(LoadOrders)
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.cmdClearPlanned_Click.End
+
+Program.Sub.GsGCPlanned_RowCellClick.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sParams.Declare
+
+	F.Intrinsic.Control.SelectCase(V.Args.Column)
+		F.Intrinsic.Control.Case("ORDER_NO")
+			F.Intrinsic.String.ConcatCallWrapperArgs(V.DataTable.dtOrders(V.Args.RowIndex).ORDER_NO!FieldVal,"O","*!*ZDR*!*",V.Local.sParams)
+				F.Global.General.CallWrapperSync(200000,V.Local.sParams)
+		
+		F.Intrinsic.Control.Case("PART")
+			F.Intrinsic.String.ConcatCallWrapperArgs("O",V.DataTable.dtOrders(V.Args.RowIndex).PART!FieldVal,V.Local.sParams)
+			F.Global.General.CallWrapperAsync(400000,V.Local.sParams)
+			
+		F.Intrinsic.Control.CaseAny("P_JOB","P_SFX")
+			F.Intrinsic.String.Concat("7","!*!",V.DataTable.dtOrders(V.Args.RowIndex).P_JOB!FieldVal,"!*!",V.DataTable.dtOrders(V.Args.RowIndex).P_SFX!FieldVal,"!*!","A",V.Local.sParams)
+			F.Global.General.CallWrapperSync(450000,V.Local.sParams)
+			
+	F.Intrinsic.Control.EndSelect
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.GsGCPlanned_RowCellClick.End
+
+Program.Sub.cmdErrors_Click.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sDir.Declare
+	V.Local.sFiles.Declare
+	
+	'Set Directory
+	F.Intrinsic.String.Build("{0}\5345\",V.Caller.TempDir,V.Local.sDir)
+	
+	'Get Logs
+	F.Intrinsic.File.GetFileList(V.Local.sDir,1,V.Local.sFiles)
+	F.Intrinsic.Control.If(V.Local.sFiles,=,"")
+		F.Intrinsic.UI.Msgbox("There are no current errors.","View Errors")
+	F.Intrinsic.Control.Else
+		'Load Errors
+		F.Intrinsic.Control.CallSub(LoadErrors,"Files",V.Local.sFiles)
+		'Format Errors
+		F.Intrinsic.Control.CallSub(FormatErrors)
+		'Show Form
+		Gui.frmErrors..Show
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.cmdErrors_Click.End
+
+Program.Sub.frmErrors_UnLoad.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	Gui.frmErrors..Visible(False)
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.frmErrors_UnLoad.End
+
+Program.Sub.LoadErrors.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sFile.Declare
+	V.Local.iCnt.Declare
+	
+	F.Intrinsic.Control.If(V.DataTable.dtErrors.Exists)
+		F.Data.DataTable.Close("dtErrors")
+	F.Intrinsic.Control.EndIf
+	
+	F.Data.DataTable.Create("dtErrors",True)
+	F.Data.DataTable.AddColumn("dtErrors","SELECT",Boolean,False)
+	F.Data.DataTable.AddColumn("dtErrors","FILE",String,"")
+
+	F.Intrinsic.String.Split(V.Args.Files,":",V.Local.sFile)
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sFile.UBound,1)
+		F.Data.DataTable.AddRow("dtErrors","FILE",V.Local.sFile(V.Local.iCnt))
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.LoadErrors.End
+
+Program.Sub.FormatErrors.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	V.Local.iCnt.Declare
+	V.Local.sColumns.Declare
+	
+	'Set and Format Grid
+	Gui.frmErrors.GsGCFiles.AddGridviewFromDatatable("gvErrors","dtErrors")
+'	Gui.frmErrors.GsGCFiles.Icon(V.Global.sGsGCIcon)
+	Gui.frmErrors.GsGCFiles.SuspendLayout()
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","MultiSelect",True)
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","AllowSort",False)
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","AllowFilter",True)
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","OptionsDetailShowDetailTabs",False)
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","OptionsViewShowGroupPanel",False)
+	Gui.frmErrors.GsGCFiles.SetGridViewProperty("gvErrors","EnableAppearanceOddRow",True)
+	
+	'Loop through columns names by using the V.DataTable.dtName.FieldNames
+	F.Intrinsic.String.Split(V.DataTable.dtErrors.FieldNames,"*!*",V.Local.sColumns)
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sColumns.UBound,1)
+		Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors",V.Local.sColumns(V.Local.iCnt),"HeaderFontBold",True)
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	
+	'SELECT
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","Caption","Select")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","MinWidth","45")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","AllowEdit",True)
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","ReadOnly",False)
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","HeaderHAlignment","Center")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","SELECT","CellHAlignment","Center")
+	
+	'FILE
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","Caption","File")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","MinWidth","225")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","AllowEdit",False)
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","ReadOnly",True)
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","HeaderHAlignment","Left")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","CellHAlignment","Left")
+	Gui.frmErrors.GsGCFiles.SetColumnProperty("gvErrors","FILE","CellForeColor","Blue")
+
+	Gui.frmErrors.GsGCFiles.ResumeLayout()
+	Gui.frmErrors.GsGCFiles.MainView("gvErrors")
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.FormatErrors.End
+
+Program.Sub.GsGCFiles_RowCellClick.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sFile.Declare
+
+	F.Intrinsic.Control.SelectCase(V.Args.Column)
+		F.Intrinsic.Control.Case("FILE")
+			F.Intrinsic.String.Build("{0}\5345\{1}",V.Caller.TempDir,V.DataTable.dtErrors(V.Args.RowIndex).FILE!FieldVal,V.Local.sFile)
+			F.Intrinsic.Task.ShellExec(0,"",V.Local.sFile,"","",1)
+	F.Intrinsic.Control.EndSelect
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.GsGCFiles_RowCellClick.End
+
+Program.Sub.cmdClear_Click.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	V.Local.sSelect.Declare
+	V.Local.iCnt.Declare
+	V.Local.sFile.Declare
+	
+	F.Data.DataTable.Select("dtErrors","SELECT = True",V.Local.sSelect)
+	F.Intrinsic.Control.If(V.Local.sSelect.IsNotNoReturn)
+		F.Intrinsic.String.Split(V.Local.sSelect,"*!*",V.Local.sSelect)
+		F.Intrinsic.Control.For(V.Local.iCnt,V.Local.sSelect.UBound,0,-1)
+			F.Intrinsic.String.Build("{0}\5345\{1}",V.Caller.TempDir,V.DataTable.dtErrors(V.Local.sSelect(V.Local.iCnt)).FILE!FieldVal,V.Local.sFile)
+			F.Intrinsic.File.DeleteFile(V.Local.sFile)
+			F.Data.DataTable.DeleteRow("dtErrors",V.Local.sSelect(V.Local.iCnt))
+		F.Intrinsic.Control.Next(V.Local.iCnt)
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.cmdClear_Click.End
+
+Program.Sub.Comments.Start
+Program.Sub.Comments.End
