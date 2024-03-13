@@ -1,0 +1,303 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+	V.Global.sGsGCIcon.Declare
+	V.Global.iOpHdrBoolean.Declare
+	V.Global.sOpHdrText1.Declare
+	V.Global.iOpHdrLong.Declare
+	V.Global.sOptResCom2.Declare
+	V.Global.sOptResCom.Declare
+	V.Global.sOrderNo.Declare
+	V.Global.sOrderLine.Declare
+	V.Global.sPWOs.Declare
+	V.Global.sPart.Declare
+	V.Global.sRev.Declare
+	V.Global.sLoc.Declare
+	
+	Program.External.Include.Library("410000.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.bPassed.Declare
+	
+	F.ODBC.Connection!con.OpenCompanyConnection(300)
+	
+	F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+		F.Intrinsic.Control.Case(12010)
+			V.Passed.000210.Set("Gen Plan WOs")
+			F.Intrinsic.UI.ChangeCallerProperty(V.Passed.000061,"LOCK",1)
+			F.Intrinsic.UI.ChangeCallerProperty(V.Passed.000061,"HIDE",1)
+			
+		F.Intrinsic.Control.Case(12430)
+			'Get and format Sales Order and Sale Order Line
+			F.Intrinsic.String.LPad(V.Passed.000060,"0",7,V.Global.sOrderNo)
+			F.Intrinsic.String.LPad(V.Passed.000051,"0",3,V.Global.sOrderLine)
+			V.Global.sPart.Set(V.Passed.000052)
+			V.Global.sRev.Set(V.Passed.000053)
+			V.Global.sPart.Set(V.Passed.000054)
+			'Generate WO for the selected Sales Order Line
+			F.Intrinsic.UI.InvokeWaitDialog("Schedule Planned Orders....","Schedule Planned Orders")
+			F.Intrinsic.Control.CallSub(SchedulePlannedOrders)
+			F.Intrinsic.UI.InvokeWaitDialog("Complete","Schedule Planned Orders")
+			F.Intrinsic.UI.CloseWaitDialog
+			
+	F.Intrinsic.Control.EndSelect
+	
+	'Called from GAB Script
+	F.Intrinsic.Variable.PassedExists("SCHEDULEWOS",V.Local.bPassed)
+	F.Intrinsic.Control.If(V.Local.bPassed)
+		'Get and format Sales Order and Sale Order Line
+		V.Global.sOrderNo.Set(V.Passed.OrderNo)
+		V.Global.sOrderLine.Set(V.Passed.OrderLine)
+		V.Global.sPart.Set(V.Passed.Part)
+		V.Global.sRev.Set(V.Passed.Rev)
+		V.Global.sLoc.Set(V.Passed.Loc)
+		'Generate WO for the selected Sales Order Line
+		F.Intrinsic.UI.InvokeWaitDialog("Schedule Planned Orders....","Schedule Planned Orders")
+		F.Intrinsic.Control.CallSub(SchedulePlannedOrders)
+		F.Intrinsic.UI.InvokeWaitDialog("Complete","Schedule Planned Orders")
+		F.Intrinsic.UI.CloseWaitDialog
+	F.Intrinsic.Control.EndIf
+	
+	F.ODBC.Connection!con.Close
+	F.Intrinsic.Control.End
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.SchedulePlannedOrders.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	V.Local.sSQL.Declare
+	V.Local.sDir.Declare
+	
+	F.Intrinsic.String.Build("SELECT * FROM GAB_5345_PLANNED WHERE SCHED_QTY <> 0 AND ORDER_NO = '{0}' AND ORDER_LINE = '{1}0' AND SEQ = 0 AND SCHED_DUE_DATE IS NOT NULL;",V.Global.sOrderNo,V.Global.sOrderLine,V.Local.sSQL)
+	F.Data.DataTable.CreateFromSQL("dtOrder","con",V.Local.sSQL,True)
+	
+	F.Intrinsic.Control.If(V.DataTable.dtOrder.RowCount,=,0)
+		F.Intrinsic.UI.CloseWaitDialog
+		F.Intrinsic.UI.Msgbox("There are no Orders with Planned Scheduled Due Dates to generate Work Orders for.","Missing Planned Scheduled Due Dates")
+	F.Intrinsic.Control.Else	
+		'Create Directory
+		F.Intrinsic.String.Build("{0}\AUTOWO",V.Caller.FilesDir,V.Local.sDir)
+		F.Intrinsic.File.CreateDir(V.Local.sDir)
+		'Check for Job Detail
+		F.Intrinsic.UI.ChangeWaitStatus("Check Job Detail for Planned Work Orders....")
+		F.Intrinsic.Control.CallSub(CheckJobDetail)
+		'Delete Planned Work Orders from GSS (Request Delete CallWrapper)
+		F.Intrinsic.UI.ChangeWaitStatus("Delete Planned Work Orders....")
+		F.Intrinsic.Control.CallSub(DeletePWOs)
+		'Schedule Work Order tied to Sales Order
+		F.Intrinsic.UI.ChangeWaitStatus("Schedule Work Order for Sales Order Line....")
+		F.Intrinsic.Control.CallSub(ScheduleSOLineWO)
+		'Create Component (MS) Work Order file
+		F.Intrinsic.UI.ChangeWaitStatus("Schedule Component Work Orders....")
+		F.Intrinsic.Control.CallSub(CreateCompWOFile)
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.SchedulePlannedOrders.End
+
+Program.Sub.CheckJobDetail.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sFile.Declare
+	V.Local.sSQL.Declare
+	V.Local.sDir.Declare
+	
+	F.Intrinsic.String.Build("{0}\5345",V.Caller.TempDir,V.Local.sDir)
+	F.Intrinsic.File.CreateDir(V.Local.sDir)
+	F.Intrinsic.String.Build("{0}\GAB_5345_JobsWithDetail_{1}_{2}.txt",V.Caller.TempDir,V.Ambient.Date.FormatYYYYMMDD,V.Caller.User,V.Local.sFile)
+	
+	F.Intrinsic.String.Build("SELECT * FROM GAB_5345_PLANNED WHERE SCHED_QTY <> 0 AND ORDER_NO = '{0}' AND ORDER_LINE = '{1}0' AND SCHED_DUE_DATE IS NOT NULL AND P_JOB+P_SFX IN (SELECT JOB+SUFFIX FROM V_JOB_DETAIL A WHERE JOB LIKE 'P%' AND (SELECT SUM(AMOUNT_LABOR) FROM V_JOB_DETAIL B WHERE A.JOB = B.JOB AND A.SUFFIX = B.SUFFIX) <> 0);",V.Global.sOrderNo,V.Global.sOrderLine,V.Local.sSQL)
+	F.Data.DataTable.CreateFromSQL("dtCheckJobDetail","con",V.Local.sSQL,True)
+	F.Intrinsic.Control.If(V.DataTable.dtCheckJobDetail.RowCount,<>,0)
+		'Stop Process and Export file
+		F.Intrinsic.UI.Msgbox("The Planned Work Orders associated with this Sales Order Line contain Job Detail Records. Please review the Work Orders in the log. Click OK to view log.","Error")
+		F.Data.DataTable.SaveToCSV("dtCheckJobDetail",V.Local.sFile,True)
+		F.Intrinsic.Task.ShellExec(0,"",V.Local.sFile,"","",1)
+		F.ODBC.Connection!con.Close
+		F.Intrinsic.Control.End
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.CheckJobDetail.End
+
+Program.Sub.DeletePWOs.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.iCnt.Declare
+	V.Local.sSQL.Declare
+	V.Local.sTableNames.Declare
+	V.Local.sTableField.Declare
+	
+	'Get Planned Work Orders
+	F.Intrinsic.String.Build("SELECT P_JOB,P_SFX FROM GAB_5345_PLANNED WHERE SCHED_QTY <> 0 AND ORDER_NO = '{0}' AND ORDER_LINE = '{1}0' AND SCHED_DUE_DATE IS NOT NULL;",V.Global.sOrderNo,V.Global.sOrderLine,V.Local.sSQL)
+	F.Data.DataTable.CreateFromSQL("dtPWOs","con",V.Local.sSQL,True)
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.DataTable.dtPWOs.RowCount--,1)
+		F.Intrinsic.Control.If(V.Local.iCnt,=,0)
+			F.Intrinsic.String.Build("'{0}'",V.DataTable.dtPWOs(V.Local.iCnt).P_JOB!FieldVal,V.Global.sPWOs)
+		F.Intrinsic.Control.Else
+			F.Intrinsic.String.Build("{0},'{1}'",V.Global.sPWOs,V.DataTable.dtPWOs(V.Local.iCnt).P_JOB!FieldVal,V.Global.sPWOs)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	
+	V.Local.sTableNames.Set("JOB_HEADER!*!JOB*!*JOB_OPERATIONS!*!JOB*!*JOB_DETAIL!*!JOB*!*JOB_DTL_SUPP!*!JOB*!*JOB_COMMITMENTS!*!JOB*!*WO_SEQ_COMMENTS!*!WO*!*SCHED_WO_SUPP!*!WO*!*APSV3_JBLINES!*!JOB*!*APSV3_JBMASTER!*!JOB*!*APSV3_UBDETAIL!*!JOB")
+	F.Intrinsic.String.Split(V.Local.sTableNames,"*!*",V.Local.sTableNames)
+	'Delete Planned Work Orders
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sTableNames.UBound,1)
+		F.Intrinsic.String.Split(V.Local.sTableNames(V.Local.iCnt),"!*!",V.Local.sTableField)
+		F.Intrinsic.String.Build("DELETE FROM {0} WHERE {1} IN ({2});",V.Local.sTableField(0),V.Local.sTableField(1),V.Global.sPWOs,V.Local.sSQL)
+		F.ODBC.Connection!con.Execute(V.Local.sSQL)
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.DeletePWOs.End
+
+Program.Sub.ScheduleSOLineWO.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	V.Local.sFile.Declare
+	V.Local.sData.Declare
+	V.Local.sRet.Declare
+	V.Local.dDueDate.Declare
+	V.Local.iRunQty.Declare
+	
+	V.Local.dDueDate.Set(V.DataTable.dtOrder(0).SCHED_DUE_DATE!FieldVal)
+	V.Local.iRunQty.Set(V.DataTable.dtOrder(0).SCHED_QTY!FieldVal)
+	
+	'Build ASCII file for CallWrapper
+	F.Intrinsic.String.Build("{0}WO_5345.txt",V.Caller.LocalGSSTempDir,V.Local.sFile)
+	F.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}*!* *!* *!*{5}*!*{6}",V.Global.sPart,V.Global.sRev,V.Global.sLoc,V.Local.dDueDate.FormatMM/DD/YYYY,V.Local.iRunQty,V.Global.sOrderNo,V.Global.sOrderLine,V.Local.sData)
+	F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sData)
+	
+	'Schedule WO from CallWrapper
+	F.Global.Callwrapper.New("SchedWO","Manufacturing.CreateWorkOrderFinishedGoodPart")
+	F.Global.Callwrapper.SetProperty("SchedWO","FileName",V.Local.sFile)
+	F.Global.CallWrapper.Run("SchedWO")
+	F.Global.CallWrapper.GetProperty("SchedWO","ReturnCode",V.Local.sRet)
+	
+	'Remove Planned Order
+	F.Data.DataTable.DeleteRow("dtOrder")
+	F.Data.DataTable.SaveToDB("dtOrder","con","GAB_5345_PLANNED","ORDER_NO*!*ORDER_LINE*!*SEQ*!*PART*!*LOCATION")
+	
+	'Close DataTable
+	F.Data.DataTable.Close("dtOrder")
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.ScheduleSOLineWO.End
+
+Program.Sub.CreateCompWOFile.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.iCnt.Declare
+	V.Local.sData.Declare
+	V.Local.sFile.Declare
+	V.Local.dDueDate.Declare
+	V.Local.sSQL.Declare
+	
+	'Set File Path
+	F.Intrinsic.String.Build("{0}\UPLIV950.TXT",V.Caller.FilesDir,V.Local.sFile)
+	
+	'Get Orders
+	F.Intrinsic.String.Build("SELECT * FROM GAB_5345_PLANNED WHERE SCHED_QTY <> 0 AND ORDER_NO = '{0}' AND ORDER_LINE = '{1}0' AND SEQ > 0 AND SCHED_DUE_DATE IS NOT NULL;",V.Global.sOrderNo,V.Global.sOrderLine,V.Local.sSQL)
+	F.Data.DataTable.CreateFromSQL("dtCompWOs","con",V.Local.sSQL,True)
+	
+	'Save File
+	F.Intrinsic.Control.If(V.DataTable.dtCompWOs.RowCount,=,0)
+'		F.Intrinsic.UI.Msgbox("There are no Orders to generate WOs for.","No Orders")
+	F.Intrinsic.Control.Else
+		'Loop through orders and create WO file
+		F.Intrinsic.Control.For(V.Local.iCnt,0,V.DataTable.dtCompWOs.RowCount--,1)
+			V.Local.dDueDate.Set(V.DataTable.dtCompWOs(V.Local.iCnt).SCHED_DUE_DATE!FieldVal)
+			F.Intrinsic.Control.If(V.Local.iCnt,=,0)
+				F.Intrinsic.String.Build("{0},{1},{2},{3},{4}",V.DataTable.dtCompWOs(V.Local.iCnt).PART!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).LOCATION!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).DESCRIPTION!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).SCHED_QTY!FieldVal,V.Local.dDueDate.FormatYYYYMMDD,V.Local.sData)
+			F.Intrinsic.Control.Else
+				F.Intrinsic.String.Build("{0}{1}{2},{3},{4},{5},{6}",V.Local.sData,V.Ambient.NewLine,V.DataTable.dtCompWOs(V.Local.iCnt).PART!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).LOCATION!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).DESCRIPTION!FieldValTrim,V.DataTable.dtCompWOs(V.Local.iCnt).SCHED_QTY!FieldVal,V.Local.dDueDate.FormatYYYYMMDD,V.Local.sData)
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.Next(V.Local.iCnt)
+		
+		'Create file from data
+		F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sData)
+	
+		'Schedule WOs
+		F.Intrinsic.Control.CallSub(ScheduleCompWOs)
+		
+		'Remove Planned Order
+		F.Data.DataTable.DeleteRow("dtCompWOs")
+		F.Data.DataTable.SaveToDB("dtCompWOs","con","GAB_5345_PLANNED","ORDER_NO*!*ORDER_LINE*!*SEQ*!*PART*!*LOCATION")
+		
+		'Close DataTable
+		F.Data.DataTable.Close("dtCompWOs")
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.CreateCompWOFile.End
+
+Program.Sub.ScheduleCompWOs.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+
+	F.Global.General.CallWrapperSync(50,"INV950/S")
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.ScheduleCompWOs.End
+
+Program.Sub.Comments.Start
+
+'Options:
+'--Automatic Numbering when not Generated from a Sales Order
+	'SELECT F_BOOLEAN FROM OP_HEADER WHERE ID = 401172 AND SEQUENCE = '0000';
+	'SELECT AUTO_NO_WO_W_PREFIX FROM OPT_RES_COM2 WHERE FUNCT = 'RS' AND TYPE = 'CO2';
+
+'--with Prefix
+	'SELECT TEXT1 FROM OP_HEADER WHERE ID = 401172 AND SEQUENCE = '0001';
+
+'--Last Number
+	'SELECT F_LONG FROM OP_HEADER WHERE ID = 401172 AND SEQUENCE = '0002';
+	'SELECT COMPANY FROM OPT_RES_COM WHERE FUNCT = 'RS' AND TYPE = 'WO';
+
+'--Use this Method when Generated from a Sales Order
+	'SELECT F_BOOLEAN FROM OP_HEADER WHERE ID = 401172 AND SEQUENCE = '0003';
+
+'--Use Prefix Associated with User ID
+	'SELECT F_BOOLEAN FROM OP_HEADER WHERE ID = 401172 AND SEQUENCE = '0004';
+
+Program.Sub.Comments.End
